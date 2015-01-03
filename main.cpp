@@ -6,24 +6,29 @@
 
 // #define DEBUG_FLAG
 
+#define LONGLONG_BITS 64
+#define BASE_BINARY 2
+
 using namespace std;
 
 class IP{
     unsigned long long h,l;
     int length;
+    static const unsigned long long one;
 public:
 
-    IP(char *s){
-        int &n=length;
-        n=strlen(s);
-        if(n<65){
+    IP(char *s, int n=0){
+        if(n==0)
+            n=strlen(s);
+        length=n;
+        if(n<=LONGLONG_BITS){
             h=0;
-            l=strtoull(s,NULL,2);
+            l=strtoull(s,NULL,BASE_BINARY);
         }else{
-            char *p=s+n-64;
-            l=strtoull(p,NULL,2);
+            char *p=s+n-LONGLONG_BITS;
+            l=strtoull(p,NULL,BASE_BINARY);
             *p='\0';
-            h=strtoull(s,NULL,2);
+            h=strtoull(s,NULL,BASE_BINARY);
         }
     }
 
@@ -41,11 +46,11 @@ public:
 
     inline IP operator >> (int bit) const {
         unsigned long long nh,nl;
-        if(bit>63){
+        if(bit>=LONGLONG_BITS){
             nh=0;
-            nl=h>>(bit-64);
+            nl=h>>(bit-LONGLONG_BITS);
         }else{
-            nl=(l>>bit)+((h&((1<<bit)-1))<<(64-bit));
+            nl=(l>>bit)+((h&((one<<bit)-one))<<(LONGLONG_BITS-bit));
             nh=h>>bit;
         }
         return IP(nh,nl);
@@ -56,11 +61,24 @@ public:
         return ((o>>(o.length-length))==(*this));
     }
 
+    inline int operator [](int pos) const {
+        const unsigned long long *p;
+        if(pos>=LONGLONG_BITS){
+            p=&h;
+            pos=pos-LONGLONG_BITS;
+        }else{
+            p=&l;
+        }
+        return (((*p) & (one<<pos)) >> pos);
+    }
+
     inline void print() const {
         printf("%llX %llX\n", h, l);
     }
 
 };
+
+const unsigned long long IP::one=static_cast<unsigned long long>(1);
 
 class Node{
 public:
@@ -90,6 +108,7 @@ int main()
 #ifndef DEBUG_FLAG
 
     FILE *f;
+
     f=fopen("RIB.txt","r");
     int n,m;
     fscanf(f,"%d\n",&n);
@@ -101,7 +120,10 @@ int main()
 #else
 
     scanf("%s[^\n]",buff);
-    cout<<(IP("").getLength())<<endl;
+    IP tmp(buff);
+    for(int i=0;i<LONGLONG_BITS*2;i+=4){
+        (tmp>>i).print();
+    }
 
 #endif
 
