@@ -233,6 +233,26 @@ int main()
     }
     fclose(f);
 
+    enum { OP_FIND=1, OP_ADD=2, OP_DEL=3 };
+    f=fopen("oper.txt","r");
+    fscanf(f,"%d", &m);
+    for(int i=0;i<m;i++) {
+        fscanf(f,"%d %s", &n, buff);
+        switch(n){
+            OP_FIND:
+                printf("%s\n",router.find(IP(buff)));
+                break;
+            OP_ADD:
+                fscanf(f,"%d %s", &l, buff2);
+                router.insert(IP(buff,l), buff2);
+                break;
+            OP_DEL:
+                fscanf(f,"%d %s", &l, buff2);
+        }
+    }
+    fclose(f);
+
+
 #else
 
     /*
