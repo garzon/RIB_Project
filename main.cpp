@@ -86,9 +86,6 @@ public:
     }
 
     inline IP operator ^ (const IP &o) const {
-        if(o.length != length){
-            throw exception();
-        }
         return IP(o.h^h, o.l^l, length);
     }
 
@@ -156,6 +153,26 @@ class RIB{
         if(res==NULL) return curr; else return res;
     }
 
+    void _delete(Node *p){
+        if(p == &root) return;
+        Node *parent = p->parent;
+        Node **self = (parent->lchild == p) ? (&(parent->lchild)) : (&(parent->rchild));
+        if((p->lchild == NULL)&&(p->rchild == NULL)) {
+            delete p;
+            *self = NULL;
+            if(parent->port == "") _delete(parent);
+            return;
+        }
+        if((p->lchild != NULL)&&(p->rchild != NULL)) {
+            p->port = "";
+            return;
+        }
+        Node *child = (p->lchild == NULL) ? p->rchild : p->lchild;
+        *self = child;
+        child->parent = parent;
+        delete p;
+    }
+
 public:
 
     RIB():
@@ -166,8 +183,10 @@ public:
         return _find(&root, addr)->port;
     }
 
-    void deleteItem(){
-
+    void deleteItem(const IP &addr, const char *port){
+        Node *res=_find(&root, addr);
+        if(strcmp(res->port.c_str(), port) != 0) return;
+        _delete(res);
     }
 
     void insert(const IP &addr, const char *port){
@@ -222,7 +241,7 @@ int main()
 
 #ifndef DEBUG_FLAG
 
-    FILE *f;
+    FILE *f, *fo;
 
     f=fopen("RIB.txt","r");
     int n,m,l; char tmp='t';
@@ -235,23 +254,25 @@ int main()
 
     enum { OP_FIND=1, OP_ADD=2, OP_DEL=3 };
     f=fopen("oper.txt","r");
+    fo=fopen("output.txt","w");
     fscanf(f,"%d", &m);
     for(int i=0;i<m;i++) {
         fscanf(f,"%d %s", &n, buff);
         switch(n){
-            OP_FIND:
-                printf("%s\n",router.find(IP(buff)));
+            case OP_FIND:
+                fprintf(fo,"%s\n",router.find(IP(buff)).c_str());
                 break;
-            OP_ADD:
+            case OP_ADD:
                 fscanf(f,"%d %s", &l, buff2);
                 router.insert(IP(buff,l), buff2);
                 break;
-            OP_DEL:
+            case OP_DEL:
                 fscanf(f,"%d %s", &l, buff2);
+                router.deleteItem(IP(buff,l), buff2);
         }
     }
     fclose(f);
-
+    fclose(fo);
 
 #else
 
