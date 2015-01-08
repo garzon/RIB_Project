@@ -170,6 +170,8 @@ class RIB{
         Node *child = (p->lchild == NULL) ? p->rchild : p->lchild;
         *self = child;
         child->parent = parent;
+
+        p->lchild = NULL; p->rchild = NULL;
         delete p;
     }
 
