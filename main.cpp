@@ -2,7 +2,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include <iostream>
 #include <algorithm>
 
 // #define DEBUG_FLAG
@@ -13,10 +12,12 @@
 using namespace std;
 
 class IP{
+    // store IP addr/pattern
     unsigned long long h,l;
     int length;
-    static const unsigned long long one;
 public:
+    static const unsigned long long one;
+    static unsigned long long *patterns;
 
     IP(char *s, int n=0){
         if(n==0)
@@ -86,6 +87,7 @@ public:
     }
 
     inline IP operator ^ (const IP &o) const {
+        // assert o.length == length
         return IP(o.h^h, o.l^l, length);
     }
 
@@ -105,22 +107,26 @@ public:
         longer = longer ^ (*shorter);
         unsigned long long &src=(longer.h==0)?longer.l:longer.h;
         int i=(longer.h==0)?min(minlen-1,LONGLONG_BITS-1):(minlen-1);
-        unsigned long long pattern=one<<((i>=LONGLONG_BITS)?(i-LONGLONG_BITS):i);
-        for(;;--i){
-            if(pattern & src) break;
-            pattern >>= 1;
+        int patternId=((i>=LONGLONG_BITS)?(i-LONGLONG_BITS):i);
+        for(;;--i,--patternId){
+            if(patterns[patternId] & src) break;
         }
         ++i;
         return (*shorter) >> i;
     }
 
+#ifdef DEBUG_FLAG
     inline void print() const {
         // for debug
-        printf("%llX %llX\n", h, l);
+        for(int i=0;i<length;i++)
+            printf("%d", (*this)[i]);
+        printf("\n");
     }
+#endif
 
 };
 
+unsigned long long* IP::patterns = new unsigned long long[LONGLONG_BITS];
 const unsigned long long IP::one=static_cast<unsigned long long>(1);
 
 class Node{
@@ -236,12 +242,21 @@ public:
 
 int main()
 {
+    // init -------------------------
+
     char *buff=new char[1000];
     char *buff2=new char[1000];
+
+    IP::patterns[LONGLONG_BITS-1] = IP::one << (LONGLONG_BITS - 1);
+    for(int i=LONGLONG_BITS-2;i>=0;--i) {
+        IP::patterns[i] = IP::patterns[i+1] >> 1;
+    }
 
     RIB router;
 
 #ifndef DEBUG_FLAG
+
+    // run --------------------------------
 
     FILE *f, *fo;
 
@@ -278,19 +293,25 @@ int main()
 
 #else
 
-    /*
-    scanf("%s[^\n]",buff);
-    IP tmp(buff);
-    for(int i=0;i<LONGLONG_BITS*2;i+=4){
-        (tmp>>i).print();
-    }
-    */
+    // debug -------------------------------------
+
+    scanf("%s[^\n]\n",buff);
+    scanf("%s[^\n]\n",buff2);
+    IP tmp(buff), tmp2(buff2);
+    //for(int i=0;i<LONGLONG_BITS*2;i+=4){
+        tmp.getLCA(tmp2).print();
+    //}
+
     //cout<<Node(IP(""),"b").port<<endl;
 
 #endif
 
+    // destroy -------------------------------------
+
     delete [] buff;
     delete [] buff2;
+    delete [] IP::patterns;
+
     return 0;
 }
 
