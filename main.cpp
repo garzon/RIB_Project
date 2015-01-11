@@ -1,7 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <string>
 #include <algorithm>
 
 // #define DEBUG_FLAG
@@ -29,7 +28,7 @@ public:
         }else{
             char *p=s+n-LONGLONG_BITS;
             l=strtoull(p,NULL,BASE_BINARY);
-            *p='\0';
+            *p=' ';
             h=strtoull(s,NULL,BASE_BINARY);
         }
     }
@@ -65,11 +64,6 @@ public:
         if(length==0) return true;
         if(o.length<length) return false;
         return ((o>>(o.length-length))==(*this));
-    }
-
-    inline bool operator >(const IP &o) const {
-        // when true: *this not match o
-        return !((*this)<o);
     }
 
     inline int operator [](int pos) const {
@@ -134,10 +128,10 @@ class Node{
 public:
     IP addr;
     Node *lchild, *rchild, *parent;
-    string port;
+    char port;
 
-    Node(const IP &s, Node *_parent=NULL, const char *_port=NULL):
-        addr(s), lchild(NULL), rchild(NULL), parent(_parent), port(_port==NULL?"":_port)
+    Node(const IP &s, Node *_parent=NULL, char _port=' '):
+        addr(s), lchild(NULL), rchild(NULL), parent(_parent), port(_port)
     {}
 
     ~Node(){
@@ -151,7 +145,7 @@ class RIB{
 
     Node * _find(Node *curr, const IP &addr){
         if(curr==NULL) return NULL;
-        if(curr->addr > addr) return NULL;
+        if(!(curr->addr < addr)) return NULL;
         int nextBit=addr[curr->addr.getLength()];
         if(nextBit==-1) return curr;  // curr->addr == addr
         Node *nextNode = ((nextBit==0)?(curr->lchild):(curr->rchild));
@@ -166,11 +160,11 @@ class RIB{
         if((p->lchild == NULL)&&(p->rchild == NULL)) {
             delete p;
             *self = NULL;
-            if(parent->port == "") _delete(parent);
+            if(parent->port == ' ') _delete(parent);
             return;
         }
         if((p->lchild != NULL)&&(p->rchild != NULL)) {
-            p->port = "";
+            p->port = ' ';
             return;
         }
         Node *child = (p->lchild == NULL) ? p->rchild : p->lchild;
@@ -187,20 +181,20 @@ public:
         root(IP(""))
     {}
 
-    inline const string & find(const IP &addr){
+    inline const char find(const IP &addr){
         return _find(&root, addr)->port;
     }
 
-    void deleteItem(const IP &addr, const char *port){
+    void deleteItem(const IP &addr, char port){
         Node *res=_find(&root, addr);
-        if(strcmp(res->port.c_str(), port) != 0) return;
+        if(res->port != port) return;
         _delete(res);
     }
 
-    void insert(const IP &addr, const char *port){
+    void insert(const IP &addr, char port){
         Node *res=_find(&root, addr);
         if(res->addr == addr){
-            res->port=string(port);
+            res->port=port;
             return;
         }
         int nextBit=addr[res->addr.getLength()];
@@ -244,8 +238,8 @@ int main()
 {
     // init -------------------------
 
-    char *buff=new char[1000];
-    char *buff2=new char[1000];
+    char *buff=new char[130];
+    char port;
 
     IP::patterns[LONGLONG_BITS-1] = IP::one << (LONGLONG_BITS - 1);
     for(int i=LONGLONG_BITS-2;i>=0;--i) {
@@ -264,8 +258,8 @@ int main()
     int n,m,l; char tmp='t';
     fscanf(f,"%d\n",&n);
     for(int i=0;i<n;i++){
-        fscanf(f,"%[^/]/%d %[^\n]\n", buff, &l, buff2);
-        router.insert(IP(buff, l), buff2);
+        fscanf(f,"%[^/]/%d %c\n", buff, &l, &port);
+        router.insert(IP(buff, l), port);
     }
     fclose(f);
 
@@ -277,15 +271,15 @@ int main()
         fscanf(f,"%d %s", &n, buff);
         switch(n){
             case OP_FIND:
-                fprintf(fo,"%s\n",router.find(IP(buff)).c_str());
+                fprintf(fo,"%c\n",router.find(IP(buff)));
                 break;
             case OP_ADD:
-                fscanf(f,"%d %s", &l, buff2);
-                router.insert(IP(buff,l), buff2);
+                fscanf(f,"%d %c", &l, &port);
+                router.insert(IP(buff,l), port);
                 break;
             case OP_DEL:
-                fscanf(f,"%d %s", &l, buff2);
-                router.deleteItem(IP(buff,l), buff2);
+                fscanf(f,"%d %c", &l, &port);
+                router.deleteItem(IP(buff,l), port);
         }
     }
     fclose(f);
@@ -309,7 +303,6 @@ int main()
     // destroy -------------------------------------
 
     delete [] buff;
-    delete [] buff2;
     delete [] IP::patterns;
 
     return 0;
