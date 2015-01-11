@@ -28,7 +28,7 @@ public:
         }else{
             char *p=s+n-LONGLONG_BITS;
             l=strtoull(p,NULL,BASE_BINARY);
-            *p=' ';
+            *p='\0';
             h=strtoull(s,NULL,BASE_BINARY);
         }
     }
