@@ -143,13 +143,16 @@ public:
 class RIB{
     Node root;
 
-    Node * _find(Node *curr, const IP &addr){
+    Node * _find(Node *curr, const IP &addr, Node **realParent = NULL){
         if(curr==NULL) return NULL;
         if(!(curr->addr < addr)) return NULL;
+        if(realParent != NULL)
+            if(curr->port != ' ')
+                *realParent = curr;
         int nextBit=addr[curr->addr.getLength()];
         if(nextBit==-1) return curr;  // curr->addr == addr
         Node *nextNode = ((nextBit==0)?(curr->lchild):(curr->rchild));
-        Node *res = _find(nextNode, addr);
+        Node *res = _find(nextNode, addr, realParent);
         if(res==NULL) return curr; else return res;
     }
 
@@ -182,7 +185,10 @@ public:
     {}
 
     inline const char find(const IP &addr){
-        return _find(&root, addr)->port;
+        Node *realParent = NULL;
+        Node *p = _find(&root, addr, &realParent);
+        if(p->port != ' ') return p->port;
+        return realParent->port;
     }
 
     void deleteItem(const IP &addr, char port){
