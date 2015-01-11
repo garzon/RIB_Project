@@ -1,6 +1,7 @@
 *.txt
 *.pro.user*
 RIB
+*~
 
 # Compiled Object files
 *.slo
