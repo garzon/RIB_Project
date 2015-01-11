@@ -54,7 +54,7 @@ public:
             nh=0;
             nl=h>>(bit-LONGLONG_BITS);
         }else{
-            nl=(l>>bit)|((h&((one<<bit)-one))<<(LONGLONG_BITS-bit));
+            nl=(l>>bit)|((h&(patterns[bit]-one))<<(LONGLONG_BITS-bit));
             nh=h>>bit;
         }
         return IP(nh,nl,length-bit);
@@ -83,7 +83,7 @@ public:
         }else{
             p=&l;
         }
-        return (((*p) & (one<<pos)) >> pos);
+        return (((*p) & patterns[pos]) >> pos);
     }
 
     inline IP operator ^ (const IP &o) const {
