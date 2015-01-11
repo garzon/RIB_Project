@@ -193,6 +193,7 @@ public:
 
     void deleteItem(const IP &addr, char port){
         Node *res=_find(&root, addr);
+        if(!(res->addr == addr)) return;
         if(res->port != port) return;
         _delete(res);
     }
