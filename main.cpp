@@ -282,7 +282,7 @@ int main()
     }
     fclose(f);
 
-    stringstream ss;
+    char *outputBuffer = new char [4000000], *outputHead = outputBuffer;
 
     enum { OP_FIND=1, OP_ADD=2, OP_DEL=3 };
     f=fopen("nix/oper4.txt","r");
@@ -292,7 +292,8 @@ int main()
         switch(n){
             case OP_FIND:
                 tmp = router.find(IP(buff));
-                ss<<tmp<<endl;
+                sprintf(outputHead, "%s\n", tmp);
+                outputHead += strlen(tmp)+1;
                 break;
             case OP_ADD:{
                 char *port=new char[2];
@@ -308,9 +309,11 @@ int main()
     }
     fclose(f);
 
-    ofstream ofs("output.txt");
-    ofs<<ss.str();
-    ofs.close();
+    f=fopen("output.txt","w");
+    fprintf(f, "%s", outputBuffer);
+    fclose(f);
+
+    delete [] outputBuffer;
 
 #else
 
