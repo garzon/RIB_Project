@@ -2,6 +2,7 @@
 *.pro.user*
 RIB
 *~
+nix/*
 
 # Compiled Object files
 *.slo

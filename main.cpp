@@ -128,11 +128,38 @@ class Node{
 public:
     IP addr;
     Node *lchild, *rchild, *parent;
-    char port;
+    unsigned short port;
 
-    Node(const IP &s, Node *_parent=NULL, char _port=' '):
-        addr(s), lchild(NULL), rchild(NULL), parent(_parent), port(_port)
-    {}
+    inline static unsigned short convertToPort(const char* _port) {
+        unsigned short port = 0;
+        int n = strlen(_port);
+        if(n==0) return port;
+        if(n==1) port = _port[0] + 1 - 'a';
+        else port = (_port[0] + 1 - 'a') * 26 + (_port[1] + 1 - 'a');
+        return port;
+    }
+
+    inline static char * convertToText(unsigned short port) {
+        char *_port = new char[2];
+        if(port == 0) {
+            _port[0] = '\0';
+            return _port;
+        }
+        if(port > 26) {
+            _port[0] = (port-1) / 26 + 'a' - 1;
+            _port[1] = ((port-1) % 26) + 'a';
+        } else {
+            _port[0] = port + 'a' - 1;
+            _port[1] = '\0';
+        }
+        return _port;
+    }
+
+    Node(const IP &s, Node *_parent=NULL, const char * _port=""):
+        addr(s), lchild(NULL), rchild(NULL), parent(_parent)
+    {
+        port = Node::convertToPort(_port);
+    }
 
     ~Node(){
         if(lchild!=NULL) delete lchild;
@@ -184,24 +211,23 @@ public:
         root(IP(""))
     {}
 
-    inline const char find(const IP &addr){
+    inline const char* find(const IP &addr){
         Node *realParent = NULL;
         Node *p = _find(&root, addr, &realParent);
-        if(p->port != ' ') return p->port;
-        return realParent->port;
+        if(p->port != 0) return Node::convertToText(p->port);
+        return Node::convertToText(realParent->port);
     }
 
-    void deleteItem(const IP &addr, char port){
+    void deleteItem(const IP &addr, const char* port){
         Node *res=_find(&root, addr);
-        if(!(res->addr == addr)) return;
-        if(res->port != port) return;
+        if (!(res->addr == addr)) return;
         _delete(res);
     }
 
-    void insert(const IP &addr, char port){
+    void insert(const IP &addr, const char* port){
         Node *res=_find(&root, addr);
         if(res->addr == addr){
-            res->port=port;
+            res->port = Node::convertToPort(port);
             return;
         }
         int nextBit=addr[res->addr.getLength()];
@@ -245,8 +271,9 @@ int main()
 {
     // init -------------------------
 
-    char *buff=new char[130];
-    char port;
+    char *buff=new char[128];
+    char *port=new char[2];
+    const char *tmp;
 
     IP::patterns[LONGLONG_BITS-1] = IP::one << (LONGLONG_BITS - 1);
     for(int i=LONGLONG_BITS-2;i>=0;--i) {
@@ -261,31 +288,33 @@ int main()
 
     FILE *f, *fo;
 
-    f=fopen("RIB.txt","r");
-    int n,m,l; char tmp='t';
+    f=fopen("nix/RIB2.txt","r");
+    int n,m,l;
     fscanf(f,"%d\n",&n);
     for(int i=0;i<n;i++){
-        fscanf(f,"%[^/]/%d %c\n", buff, &l, &port);
+        fscanf(f,"%[^/]/%d %s\n", buff, &l, port);
         router.insert(IP(buff, l), port);
     }
     fclose(f);
 
     enum { OP_FIND=1, OP_ADD=2, OP_DEL=3 };
-    f=fopen("oper.txt","r");
+    f=fopen("nix/oper4.txt","r");
     fo=fopen("output.txt","w");
     fscanf(f,"%d", &m);
     for(int i=0;i<m;i++) {
         fscanf(f,"%d %s", &n, buff);
         switch(n){
             case OP_FIND:
-                fprintf(fo,"%c\n",router.find(IP(buff)));
+                tmp = router.find(IP(buff));
+                fprintf(fo,"%s\n", tmp);
+                delete [] tmp;
                 break;
             case OP_ADD:
-                fscanf(f,"%d %c", &l, &port);
+                fscanf(f,"%d %s", &l, port);
                 router.insert(IP(buff,l), port);
                 break;
             case OP_DEL:
-                fscanf(f,"%d %c", &l, &port);
+                fscanf(f,"%d %s", &l, port);
                 router.deleteItem(IP(buff,l), port);
         }
     }
@@ -310,6 +339,7 @@ int main()
     // destroy -------------------------------------
 
     delete [] buff;
+    delete [] port;
     delete [] IP::patterns;
 
     return 0;
