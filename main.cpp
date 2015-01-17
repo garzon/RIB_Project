@@ -298,7 +298,7 @@ int main()
                 break;
             }
             case OP_DEL:{
-                fscanf(f,"%d %s", &l);
+                fscanf(f,"%d %*s", &l);
                 router.deleteItem(IP(buff,l), NULL);
             }
         }
