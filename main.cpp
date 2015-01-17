@@ -274,7 +274,7 @@ int main()
 {
     // init -------------------------
 
-    char *buff=new char[128];
+    char *buff=new char[LONGLONG_BITS*2];
 
     IP::patterns[LONGLONG_BITS-1] = IP::one << (LONGLONG_BITS - 1);
     for(int i=LONGLONG_BITS-2;i>=0;--i) {
