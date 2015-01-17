@@ -12,9 +12,11 @@ using namespace std;
 
 class IP{
     // store IP addr/pattern
+public:
+
     unsigned long long h,l;
     int length;
-public:
+
     static const unsigned long long one;
     static unsigned long long *patterns;
 
@@ -36,10 +38,6 @@ public:
     IP(unsigned long long _h, unsigned long long _l, int _length):
         h(_h), l(_l), length(_length)
     {}
-
-    inline int getLength() const {
-        return length;
-    }
 
     inline bool operator == (const IP &o) const {
         // same
@@ -174,7 +172,7 @@ class RIB{
         if(realParent != NULL)
             if(curr->portLen != 0)
                 *realParent = curr;
-        int nextBit=addr[curr->addr.getLength()];
+        int nextBit=addr[curr->addr.length];
         if(nextBit==-1) return curr;  // curr->addr == addr
         Node *nextNode = ((nextBit==0)?(curr->lchild):(curr->rchild));
         Node *res = _find(nextNode, addr, realParent);
@@ -205,6 +203,49 @@ class RIB{
         delete p;
     }
 
+    Node * _insert(const IP &addr, const char* port){
+        Node *res=_find(&root, addr);
+        if(res->addr == addr) {
+            res->setPort(port);
+            return res;
+        }
+        int nextBit=addr[res->addr.length];
+        Node **nextNode = ((nextBit==0)?(&(res->lchild)):(&(res->rchild)));
+        if((*nextNode) == NULL){
+            //cout<<"INSERT To: "<<res->port<<" Child:"<<port<<endl;
+            (*nextNode) = new Node(addr, res, port);
+            return *nextNode;
+        }
+        if(addr < (*nextNode)->addr){
+            Node *newNode = new Node(addr, res, port);
+            int nextBit=(*nextNode)->addr[addr.length];
+            Node **newNextNode = ((nextBit==0)?(&(newNode->lchild)):(&(newNode->rchild)));
+            (*nextNode)->parent = newNode;
+            *newNextNode = *nextNode;
+            (*nextNode) = newNode;
+            //cout<<"INSERT To: "<<res->port<<" Child:"<<port<<" NewChild:"<<(*newNextNode)->port<<endl;
+            return newNode;
+        }
+
+        IP LCA=addr.getLCA((*nextNode)->addr);
+        Node *nLCA=new Node(LCA, res);
+        Node *newNode=new Node(addr, nLCA, port);
+        if(addr[LCA.length]==0){
+            nLCA->lchild=newNode;
+            nLCA->rchild=*nextNode;
+            nLCA->rchild->parent=nLCA;
+        }else{
+            nLCA->rchild=newNode;
+            nLCA->lchild=*nextNode;
+            nLCA->lchild->parent=nLCA;
+        }
+        *nextNode = nLCA;
+        return newNode;
+        //cout<<"INSERT To: "<<res->port<<" LCA:"<<nLCA->port<<
+        //      " LChild:"<<nLCA->lchild->port<<
+        //      " RChild:"<<nLCA->rchild->port<<endl;
+    }
+
 public:
 
     RIB():
@@ -225,45 +266,7 @@ public:
     }
 
     void insert(const IP &addr, const char* port){
-        Node *res=_find(&root, addr);
-        if(res->addr == addr) {
-            res->setPort(port);
-            return;
-        }
-        int nextBit=addr[res->addr.getLength()];
-        Node **nextNode = ((nextBit==0)?(&(res->lchild)):(&(res->rchild)));
-        if((*nextNode) == NULL){
-            //cout<<"INSERT To: "<<res->port<<" Child:"<<port<<endl;
-            (*nextNode) = new Node(addr, res, port);
-            return;
-        }
-        if(addr < (*nextNode)->addr){
-            Node *newNode = new Node(addr, res, port);
-            int nextBit=(*nextNode)->addr[addr.getLength()];
-            Node **newNextNode = ((nextBit==0)?(&(newNode->lchild)):(&(newNode->rchild)));
-            (*nextNode)->parent = newNode;
-            *newNextNode = *nextNode;
-            (*nextNode) = newNode;
-            //cout<<"INSERT To: "<<res->port<<" Child:"<<port<<" NewChild:"<<(*newNextNode)->port<<endl;
-            return;
-        }
-
-        IP LCA=addr.getLCA((*nextNode)->addr);
-        Node *nLCA=new Node(LCA, res);
-        Node *newNode=new Node(addr, nLCA, port);
-        if(addr[LCA.getLength()]==0){
-            nLCA->lchild=newNode;
-            nLCA->rchild=*nextNode;
-            nLCA->rchild->parent=nLCA;
-        }else{
-            nLCA->rchild=newNode;
-            nLCA->lchild=*nextNode;
-            nLCA->lchild->parent=nLCA;
-        }
-        *nextNode = nLCA;
-        //cout<<"INSERT To: "<<res->port<<" LCA:"<<nLCA->port<<
-        //      " LChild:"<<nLCA->lchild->port<<
-        //      " RChild:"<<nLCA->rchild->port<<endl;
+        _insert(addr, port);
     }
 };
 
