@@ -128,22 +128,42 @@ class Node{
 public:
     IP addr;
     Node *lchild, *rchild, *parent;
-    char *port;
+    char port1, port2;
+    int portLen;
 
-    static char* emptyPort;
+    inline void setPort(const char* _port) {
+        if(_port == NULL) { port1 = '\0'; return; }
+        port1 = _port[0];
+        port2 = _port[1];
+        portLen = port2 == '\0' ? 1 : 2;
+    }
 
-    Node(const IP &s, Node *_parent=NULL, char *_port=emptyPort):
-        addr(s), lchild(NULL), rchild(NULL), parent(_parent), port(_port)
-    {}
+    inline void getPort(char * &pointer) {
+        if(portLen == 0) {
+            *(pointer++) = '\n';
+            return;
+        }
+        if(portLen == 2) {
+            *(pointer++) = port1;
+            *(pointer++) = port2;
+            *(pointer++) = '\n';
+            return;
+        }
+        *(pointer++) = port1;
+        *(pointer++) = '\n';
+    }
+
+    Node(const IP &s, Node *_parent=NULL, const char* _port=NULL):
+        addr(s), lchild(NULL), rchild(NULL), parent(_parent), portLen(0)
+    {
+        setPort(_port);
+    }
 
     ~Node(){
         if(lchild!=NULL) delete lchild;
         if(rchild!=NULL) delete rchild;
-        if(port != emptyPort) delete [] port;
     }
 };
-
-char *Node::emptyPort = "  ";
 
 class RIB{
     Node root;
@@ -152,7 +172,7 @@ class RIB{
         if(curr==NULL) return NULL;
         if(!(curr->addr < addr)) return NULL;
         if(realParent != NULL)
-            if(curr->port != Node::emptyPort)
+            if(curr->portLen != 0)
                 *realParent = curr;
         int nextBit=addr[curr->addr.getLength()];
         if(nextBit==-1) return curr;  // curr->addr == addr
@@ -168,13 +188,13 @@ class RIB{
         if((p->lchild == NULL)&&(p->rchild == NULL)) {
             delete p;
             *self = NULL;
-            if(parent->port == Node::emptyPort) _delete(parent);
+            if(parent->portLen == 0) _delete(parent);
             return;
         }
         if((p->lchild != NULL)&&(p->rchild != NULL)) {
-            if(p->port == Node::emptyPort) return;
-            delete [] p->port;
-            p->port = Node::emptyPort;
+            if(p->portLen == 0) return;
+            p->port1 = '\0';
+            p->portLen = 0;
             return;
         }
         Node *child = (p->lchild == NULL) ? p->rchild : p->lchild;
@@ -191,25 +211,23 @@ public:
         root(IP(""))
     {}
 
-    inline const char* find(const IP &addr){
+    inline Node* find(const IP &addr){
         Node *realParent = NULL;
         Node *p = _find(&root, addr, &realParent);
-        if(p->port != Node::emptyPort) return p->port;
-        return realParent->port;
+        if(p->portLen != 0) return p;
+        return realParent;
     }
 
-    void deleteItem(const IP &addr, const char* port){
+    void deleteItem(const IP &addr){
         Node *res=_find(&root, addr);
         if (!(res->addr == addr)) return;
         _delete(res);
     }
 
-    void insert(const IP &addr, char* port){
+    void insert(const IP &addr, const char* port){
         Node *res=_find(&root, addr);
         if(res->addr == addr) {
-            if(res->port != Node::emptyPort)
-                delete [] res->port;
-            res->port = port;
+            res->setPort(port);
             return;
         }
         int nextBit=addr[res->addr.getLength()];
@@ -254,7 +272,6 @@ int main()
     // init -------------------------
 
     char *buff=new char[128];
-    const char *tmp;
 
     IP::patterns[LONGLONG_BITS-1] = IP::one << (LONGLONG_BITS - 1);
     for(int i=LONGLONG_BITS-2;i>=0;--i) {
@@ -265,52 +282,50 @@ int main()
 
 #ifndef DEBUG_FLAG
 
-    // run --------------------------------
+    // run phase 1 (offline) --------------
 
-    FILE *f, *fo;
+    FILE *f;
+    int n,m,l;
+    char *port=new char[2];
 
     f=fopen("nix/RIB2.txt","r");
-    int n,m,l;
     fscanf(f,"%d\n",&n);
     for(int i=0;i<n;i++){
-        char *port=new char[2];
         fscanf(f,"%[^/]/%d %s\n", buff, &l, port);
         router.insert(IP(buff, l), port);
     }
     fclose(f);
 
-    char *outputBuffer = new char [4000000], *outputHead = outputBuffer;
+    // run phase 2 (online) ----------------
 
+    char *outputBuffer = new char [4000000], *outputHead = outputBuffer;
     enum { OP_FIND=1, OP_ADD=2, OP_DEL=3 };
+
     f=fopen("nix/oper4.txt","r");
     fscanf(f,"%d", &m);
     for(int i=0;i<m;i++) {
         fscanf(f,"%d %s", &n, buff);
         switch(n){
             case OP_FIND:
-                tmp = router.find(IP(buff));
-                sprintf(outputHead, "%s\n", tmp);
-                outputHead += strlen(tmp)+1;
+                router.find(IP(buff))->getPort(outputHead);
                 break;
             case OP_ADD:{
-                char *port=new char[2];
                 fscanf(f,"%d %s", &l, port);
                 router.insert(IP(buff,l), port);
                 break;
             }
             case OP_DEL:{
                 fscanf(f,"%d %*s", &l);
-                router.deleteItem(IP(buff,l), NULL);
+                router.deleteItem(IP(buff,l));
             }
         }
     }
     fclose(f);
 
+    // output ------------------------------------
     f=fopen("output.txt","w");
     fprintf(f, "%s", outputBuffer);
     fclose(f);
-
-    delete [] outputBuffer;
 
 #else
 
@@ -330,8 +345,9 @@ int main()
     // destroy -------------------------------------
 
     delete [] buff;
+    delete [] port;
+    delete [] outputBuffer;
     delete [] IP::patterns;
-    //delete [] Node::emptyPort;
 
     return 0;
 }
