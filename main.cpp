@@ -3,6 +3,8 @@
 #include <cstring>
 #include <algorithm>
 #include <iostream>
+#include <sstream>
+#include <fstream>
 
 // #define DEBUG_FLAG
 
@@ -280,16 +282,17 @@ int main()
     }
     fclose(f);
 
+    stringstream ss;
+
     enum { OP_FIND=1, OP_ADD=2, OP_DEL=3 };
     f=fopen("nix/oper4.txt","r");
-    fo=fopen("output.txt","w");
     fscanf(f,"%d", &m);
     for(int i=0;i<m;i++) {
         fscanf(f,"%d %s", &n, buff);
         switch(n){
             case OP_FIND:
                 tmp = router.find(IP(buff));
-                fprintf(fo,"%s\n", tmp);
+                ss<<tmp<<endl;
                 break;
             case OP_ADD:{
                 char *port=new char[2];
@@ -304,7 +307,10 @@ int main()
         }
     }
     fclose(f);
-    fclose(fo);
+
+    ofstream ofs("output.txt");
+    ofs<<ss.str();
+    ofs.close();
 
 #else
 
