@@ -324,7 +324,7 @@ int main()
 
     // output ------------------------------------
     f=fopen("output.txt","w");
-    fprintf(f, "%s", outputBuffer);
+    fputs(outputBuffer, f);
     fclose(f);
 
 #else
