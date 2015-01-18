@@ -1,7 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <algorithm>
 
 // #define DEBUG_FLAG
 
@@ -54,39 +53,53 @@ public:
 class RIB{
     Node root;
 
-    Node * _find(Node *curr, const char *addr, bool createNew, Node **realParent = NULL) {
-        if(realParent != NULL) {
-            if(curr->portLen != 0) {
-                *realParent = curr;
-            }
-        }
+    Node * _find_find(Node *curr, const char *addr, Node **realParent) {
+        if(curr->portLen != 0) *realParent = curr;
         if(*addr == '\0') return curr;
         if(*addr == '0') {
-            if(curr->rchild == NULL) {
-                if(createNew)
-                    curr->rchild = new Node(curr, &(curr->rchild));
-                else return curr;
-            }
-            return _find(curr->rchild, ++addr, createNew, realParent);
+            if(curr->rchild == NULL) return curr;
+            return _find_find(curr->rchild, ++addr, realParent);
         } else {
-            if(curr->lchild == NULL) {
-                if(createNew)
-                    curr->lchild = new Node(curr, &(curr->lchild));
-                else return curr;
-            }
-            return _find(curr->lchild, ++addr, createNew, realParent);
+            if(curr->lchild == NULL) return curr;
+            return _find_find(curr->lchild, ++addr, realParent);
+        }
+    }
+
+    Node * _delete_find(Node *curr, const char *addr) {
+        if(*addr == '\0') return curr;
+        if(*addr == '0') {
+            // if(curr->rchild == NULL) assert(false);
+            return _delete_find(curr->rchild, ++addr);
+        } else {
+            // if(curr->lchild == NULL) assert(false);
+            return _delete_find(curr->lchild, ++addr);
+        }
+    }
+
+    Node * _insert_find(Node *curr, const char *addr) {
+        if(*addr == '\0') return curr;
+        if(*addr == '0') {
+            if(curr->rchild == NULL) curr->rchild = new Node(curr, &(curr->rchild));
+            return _insert_find(curr->rchild, ++addr);
+        } else {
+            if(curr->lchild == NULL) curr->lchild = new Node(curr, &(curr->lchild));
+            return _insert_find(curr->lchild, ++addr);
         }
     }
 
     void _delete(Node *p){
         Node *parent = p->parent;
-        delete p;
-        if(parent != &root) {
-            if(parent->lchild == NULL)
-                if(parent->rchild == NULL)
-                    if(parent->portLen == 0) {
-                        _delete(parent);
-                    }
+        if(p->lchild == NULL && p->rchild == NULL) {
+            delete p;
+            if(parent != &root) {
+                if(parent->lchild == NULL)
+                    if(parent->rchild == NULL)
+                        if(parent->portLen == 0) {
+                            _delete(parent);
+                        }
+            }
+        } else {
+            p->portLen = 0;
         }
     }
 
@@ -98,16 +111,16 @@ public:
 
     inline Node* find(const char* addr) {
         Node *realParent;
-        Node *res = _find(&root, addr, false, &realParent);
+        Node *res = _find_find(&root, addr, &realParent);
         return res->portLen == 0 ? realParent : res;
     }
 
     inline void remove(const char *addr) {
-        _delete(_find(&root, addr, true));
+        _delete(_delete_find(&root, addr));
     }
 
     inline void insert(const char *addr, const char* port) {
-        _find(&root, addr, true)->setPort(port);
+        _insert_find(&root, addr)->setPort(port);
     }
 };
 
